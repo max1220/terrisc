@@ -20,13 +20,13 @@ emulator: Terra already has all the facilitys to make that happen(mostly LLVM).
 
 ## Files
 
-| Filename            | Description |
-| ------------------- | ----------- |
-| cpu.t               | Main entry: implements registers, step function, run, ...
-| mem.t               | memory functions (e.g. reading a byte or word)
-| instruction_decoder | generates an instruction decoder function, to resolve instructions to instruction callback pointers
-| instructions_RV32I  | implements the RV32I base instruction set(incomplete). Each instruction registers itself to an instrucion_decoder via a bitmask, bitpattern and a callback pointer
-| cpu_test.t          | 
+| Filename              | Description |
+| --------------------- | ----------- |
+| cpu.t                 | Main entry: implements registers, step function, run, ...
+| mem.t                 | memory functions (e.g. reading a byte or word)
+| instruction_decoder.t | generates an instruction decoder function, to resolve instructions to instruction callback pointers
+| instructions_RV32I.t  | implements the RV32I base instruction set(incomplete). Each instruction registers itself to an instrucion_decoder via a bitmask, bitpattern and a callback pointer
+| cpu_test.t            | Some tests for the CPU. Not automated. More a reference. Might be broken at times.
 
 
 
