@@ -16,7 +16,10 @@ emulator: Terra already has all the facilitys to make that happen(mostly LLVM).
 
 
 
+
+
 ## Files
+
 | Filename            | Description |
 | ------------------- | ----------- |
 | cpu.t               | Main entry: implements registers, step function, run, ...
@@ -26,17 +29,28 @@ emulator: Terra already has all the facilitys to make that happen(mostly LLVM).
 | cpu_test.t          | 
 
 
+
+
+
 ## Current status
 
 IDK how often this status will be updated, the source code is the canonnical
 documentation:
 
-### Implemented:
-
- * instruction decoder
- * decoding of most(all?) immediates for RV32I
 
 
-### Missing(for base ISA):
+ ### Implemented:
 
- * compressed instruction decoder
+  * instruction decoder
+  * decoding of most(all?) immediates for RV32I
+  * some of the instruction callbacks
+
+ ### Missing(for base ISA):
+
+  * compressed instruction decoder
+  * proper signed-ness in all instructions
+
+ ### General TODO:
+
+  * `grep -r "TODO:" .`
+  * Debug functions/interface option(Remove print's, only compile if needed)
