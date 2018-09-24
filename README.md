@@ -1,6 +1,6 @@
 # terrisc
 
-This is an incomplete atempt to implement a RV32I(later up to RV64G) emulator.
+This is an incomplete atempt to implement a RV32I v2.2(later up to RV64G) emulator.
 
 It uses the terra programming language, which extends Lua by a staticly-typed
 language that integrates with normal Lua code.
