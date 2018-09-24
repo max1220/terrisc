@@ -47,10 +47,18 @@ documentation:
 
  ### Missing(for base ISA):
 
-  * compressed instruction decoder
+  * missing instruction callbacks
   * proper signed-ness in all instructions
+  * branching
+  * traps, interrupts, ...
 
  ### General TODO:
 
-  * `grep -r "TODO:" .`
+  * find test cases, run tests
+  * check sign-ness for instructions(sign-extension to spec?)
+  * compressed instruction decoder
+  * `grep -r "TODO:" *.t`
   * Debug functions/interface option(Remove print's, only compile if needed)
+  * (interactive) debugger?
+  * debugger support?
+  * build example C & tun in emulator
