@@ -75,7 +75,7 @@ local function register(register_instruction, cpu)
 	end
 	arg_rd:setinlined(true)
 
-	local terra arg_func3(instr : uint32) -- bits 12-14
+	local terra arg_func3(instr : uint32) -- bits 12-14, usually bit-matched in instruction
 		return [uint8]((instr >> 12) and 0x03)
 	end
 	arg_func3:setinlined(true)
@@ -90,7 +90,7 @@ local function register(register_instruction, cpu)
 	end
 	arg_rs2:setinlined(true)
 
-	local terra arg_func7(instr : uint32) -- bits 25-31
+	local terra arg_func7(instr : uint32) -- bits 25-31, usually bit-matched in instruction
 		return [uint8]((instr >> 25) and 0x7f)
 	end
 	arg_func7:setinlined(true)
@@ -100,7 +100,7 @@ local function register(register_instruction, cpu)
 	-- [[ Instruction immediate argument decoders ]] --
 	-- these functions should always be inlined
 	
-	local terra arg_imm_i(instr : uint32) -- bits 20-31
+	local terra arg_imm_i(instr : uint32) -- bits 20-31 as bits 0-11
 		return [uint32]((instr >> 20) and 0x0FFF)
 	end
 	arg_imm_i:setinlined(true)
@@ -124,16 +124,22 @@ local function register(register_instruction, cpu)
 	end
 	arg_imm_b:setinlined(true)
 
-	local terra arg_imm_u(instr : uint32) -- bits 12-31
-		return [uint32]((instr >> 12) and 0x0FFFFF)
+	local terra arg_imm_u(instr : uint32) -- bits 12-31 as bits 12-31
+		return [uint32](instr and 0xFFFFF000)
 	end
 	arg_imm_u:setinlined(true)
 	
-	local terrra arg_imm_sign_extend(instr : uint32, imm : uint32) : int32
-		local sign = instr and 0x80000000 -- sign is bit 31
+	local terra arg_imm_sign_extend(instr : uint32, imm : uint32) : int32
+		-- convert the unsigned imm to a signed imm, by copying bit 31,
+		-- the sign bit to the imm.
+		var sign = instr and 0x80000000 -- sign is bit 31
 		return [int32](imm or sign) -- TODO: is or the correct operation?
 	end
-	arg_imm_u:arg_imm_sign_extend(true)
+	arg_imm_sign_extend:setinlined(true)
+	
+	
+	
+	
 	
 	-- [[ Instruction implementation ]] --
 	
@@ -142,13 +148,16 @@ local function register(register_instruction, cpu)
 			-- rd, imm_u
 			var rd : uint8 = arg_rd(instr)
 			var imm : uint32 = arg_imm_u(instr)
-			cpu:set_register(rd, imm << 12)
+			cpu:set_register(rd, imm)
 		end
 	)
 	
 	add_instruction( "AUIPC",	"?????????????????????????0010111",
 		terra(instr : uint32)
 			-- rd, imm_u
+			var rd : uint8 = arg_rd(instr)
+			var imm : uint32 = arg_imm_u(instr)
+			cpu:set_register(rd, imm + cpu.pc)
 		end
 	)
 	
@@ -253,7 +262,7 @@ local function register(register_instruction, cpu)
 			-- rd, rs1, imm_i
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
 			cpu:set_register(rd, cpu:get_register(rs1) + imm)
 		end
 	)
@@ -261,11 +270,10 @@ local function register(register_instruction, cpu)
 	add_instruction( "SLTI",	"?????????????????010?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
-			-- TODO: Check sign
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
-			if cpu:get_register(rs1) < imm then
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
+			if [int64](cpu:get_register(rs1)) < imm then
 				cpu:set_register(rd, 1)
 			else
 				cpu:set_register(rd, 0)
@@ -276,10 +284,9 @@ local function register(register_instruction, cpu)
 	add_instruction( "SLTIU",	"?????????????????011?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
-			-- TODO: Check sign
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
+			var imm : uint32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm as uint
 			if cpu:get_register(rs1) < imm then
 				cpu:set_register(rd, 1)
 			else
@@ -291,10 +298,9 @@ local function register(register_instruction, cpu)
 	add_instruction( "XORI",	"?????????????????100?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
-			-- TODO: Check sign
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
 			cpu:set_register(rd, cpu:get_register(rs1) ^ imm)
 		end
 	)
@@ -302,10 +308,9 @@ local function register(register_instruction, cpu)
 	add_instruction( "ORI",		"?????????????????110?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
-			-- TODO: Check sign
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
 			cpu:set_register(rd, cpu:get_register(rs1) or imm)
 		end
 	)
@@ -313,10 +318,9 @@ local function register(register_instruction, cpu)
 	add_instruction( "ANDI",	"?????????????????111?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
-			-- TODO: Check sign
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : uint32 = arg_imm_i(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
 			cpu:set_register(rd, cpu:get_register(rs1) and imm)
 		end
 	)
@@ -348,68 +352,126 @@ local function register(register_instruction, cpu)
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
 			var imm : uint32 = arg_imm_i(instr) and 0x1F 
-			var sign : bool = (imm and 0x800) == 0
-			cpu:set_register(rd, cpu:get_register(rs1) >> imm)
+			if (instr and 0x80000000) == 0 then
+				cpu:set_register(rd, cpu:get_register(rs1) >> imm)
+			else
+				-- copy sign bit
+				cpu:set_register(rd, (cpu:get_register(rs1) >> imm) or 0x80000000)
+			end
 		end
 	)
 	
 	add_instruction( "ADD",		"0000000??????????000?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) + cpu:get_register(rs2))
 		end
 	)
 	
 	add_instruction( "SUB",		"0100000??????????000?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) - cpu:get_register(rs2))
 		end
 	)
 	
 	add_instruction( "SLL",		"0000000??????????001?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) << cpu:get_register(rs2) and 0x1F)
 		end
 	)
 	
 	add_instruction( "SLT",		"0000000??????????010?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if [int64](cpu:get_register(rs1)) < [int64](cpu:get_register(rs2)) then
+				cpu:set_register(rd, 1)
+			else
+				cpu:set_register(rd, 0)
+			end
 		end
 	)
 	
 	add_instruction( "SLTU",	"0000000??????????011?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if cpu:get_register(rs1) < cpu:get_register(rs2) then
+				cpu:set_register(rd, 1)
+			else
+				cpu:set_register(rd, 0)
+			end
 		end
 	)
 	
 	add_instruction( "XOR",		"0000000??????????100?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) ^ cpu:get_register(rs2))
 		end
 	)
 	
 	add_instruction( "SRL",		"0000000??????????101?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) >> cpu:get_register(rs2) and 0x1F)
 		end
 	)
 	
 	add_instruction( "SRA",		"0100000??????????101?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if (cpu:get_register(rs1) and 0x8000000000000000) == 0 then
+				cpu:set_register(rd, cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F))
+			else
+				-- copy sign bit
+				cpu:set_register(rd, (cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F)) or 0x8000000000000000)
+			end
+			
 		end
 	)
 	
 	add_instruction( "OR",		"0000000??????????110?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) or cpu:get_register(rs2))
 		end
 	)
 	
 	add_instruction( "AND",		"0000000??????????111?????0110011",
 		terra(instr : uint32)
-			-- rd, rs1, imm_i
+			-- rd, rs1, rs2
+			var rd : uint8 = arg_rd(instr)
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			cpu:set_register(rd, cpu:get_register(rs1) and cpu:get_register(rs2))
 		end
 	)
 	
