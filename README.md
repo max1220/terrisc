@@ -54,6 +54,7 @@ documentation:
 
  ### General TODO:
 
+  * abstract the register typed away in the instructions and cpu
   * find test cases, run tests
   * check sign-ness for instructions(sign-extension to spec?)
   * compressed instruction decoder
