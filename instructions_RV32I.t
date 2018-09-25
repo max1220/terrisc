@@ -1,4 +1,6 @@
 -- This file defines and implements the RV32I base instruction set
+-- based on RISC-V v2.2 (https://content.riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf)
+
 
 local stdio = terralib.includec("stdio.h")
 
@@ -69,6 +71,7 @@ local function register(register_instruction, cpu)
 
 	-- [[ Instruction argument decoders ]] --
 	-- these functions should always be inlined
+	-- TODO: write test cases for all of these
 	
 	local terra arg_rd(instr : uint32) -- bits 7-11
 		return [uint8]((instr >> 7) and 0x1F)
@@ -99,6 +102,7 @@ local function register(register_instruction, cpu)
 	
 	-- [[ Instruction immediate argument decoders ]] --
 	-- these functions should always be inlined
+	-- TODO: write test cases for all of these
 	
 	local terra arg_imm_i(instr : uint32) -- bits 20-31 as bits 0-11
 		return [uint32]((instr >> 20) and 0x0FFF)
@@ -112,10 +116,10 @@ local function register(register_instruction, cpu)
 	
 	local terra arg_imm_b(instr : uint32) -- bit 7 as bit 11, bits 8-11 as bits 1-4, 25-30 as bits 5-10
 		-- bits 8-11 encode bits 1-4
-		var imm_1_4 : uint32 = (instr and 0x0F00) << 8
+		var imm_1_4 : uint32 = (instr and 0x0F00) >> 7
 		
 		-- bit 7 encodes bit 11
-		var imm_11 : uint32 = (instr and 0x80) << 3
+		var imm_11 : uint32 = (instr and 0x80) << 4
 		
 		-- bits 25-30 encode bits 5-10
 		var imm_5_10 : uint32 = (instr and 0x7E000000) >> 20
@@ -128,6 +132,23 @@ local function register(register_instruction, cpu)
 		return [uint32](instr and 0xFFFFF000)
 	end
 	arg_imm_u:setinlined(true)
+
+	local terra arg_imm_j(instr : uint32)
+		-- bits 12-19 as bits 12-19
+		var imm_12_19 : uint32 = (instr and 0x000FF000)
+		
+		-- bit 20 as bit 11
+		var imm_11 : uint32 = (instr and 0x00100000) >> 9
+		
+		-- bits 21-30 as bits 1-10
+		var imm_1_10 : uint32 = (instr and 0x7FE00000) >> 20
+		
+		-- bit 31 as bit 20
+		var imm_20 : uint32 = (instr and 0xFF000000) >> 11
+		
+		return [uint32](imm_1_10 or imm_11 or imm_12_19  or imm_20)
+	end
+	arg_imm_j:setinlined(true)
 	
 	local terra arg_imm_sign_extend(instr : uint32, imm : uint32) : int32
 		-- convert the unsigned imm to a signed imm, by copying bit 31,
@@ -142,6 +163,10 @@ local function register(register_instruction, cpu)
 	
 	
 	-- [[ Instruction implementation ]] --
+	--[[
+		In the risc-v spec v2.2 pdf, the desciption this is based on
+		starts on page 22 and 115.
+	]]
 	
 	add_instruction( "LUI",		"?????????????????????????0110111",
 		terra(instr : uint32)
