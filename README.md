@@ -54,11 +54,12 @@ documentation:
 
  ### General TODO:
 
+  * Floating point library binding(SoftFP?)
   * abstract the register typed away in the instructions and cpu
   * find test cases, run tests
   * check sign-ness for instructions(sign-extension to spec?)
   * compressed instruction decoder
-  * `grep -r "TODO:" *.t`
+  * `grep -nr "TODO:" *.t`
   * Debug functions/interface option(Remove print's, only compile if needed)
   * (interactive) debugger?
   * debugger support?
