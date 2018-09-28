@@ -19,7 +19,9 @@ local function register(register_instruction, cpu)
 	-- [[ Utillity functions ]] --
 	
 	local function decode_bin_str(str)
-		-- decodes a string in the format of "1001????" into a mask and pattern so that ? represents the bits not set in the mask, and 1 or 0 represent their value in the pattern
+		-- decodes a string in the format of "1001????" into a mask and
+		-- pattern so that ? represents the bits not set in the mask,
+		-- and 1 or 0 represent their value in the pattern
 		assert(#str == 32, "Bad lenght")
 		local str = str:reverse()
 		local mask = 0xFFFFFFFF
@@ -474,7 +476,7 @@ local function register(register_instruction, cpu)
 				cpu:set_register(rd, cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F))
 			else
 				-- copy sign bit
-				cpu:set_register(rd, (cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F)) or 0x8000000000000000)
+				cpu:set_register(rd, (cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F)) or [uint64](1)<<63)
 			end
 			
 		end
