@@ -1,5 +1,6 @@
 -- This file defines and implements the RV32I base instruction set
--- based on RISC-V v2.2 (https://content.riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf)
+-- based on RISC-V v2.2
+--(https://content.riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf)
 
 -- I recommend a text editor with code folding support, as this file is quite
 -- long(not only because it contains lots of excerpts from the RISC-V spec).
@@ -89,27 +90,32 @@ local function register(register_instruction, cpu)
 	]]
 
 
-	local terra arg_rd(instr : uint32) -- bits 7-11
+	local terra arg_rd(instr : uint32)
+		-- bits 7-11
 		return [uint8]((instr >> 7) and 0x1F)
 	end
 	arg_rd:setinlined(true)
 
-	local terra arg_func3(instr : uint32) -- bits 12-14, usually bit-matched in instruction
+	local terra arg_func3(instr : uint32)
+		-- bits 12-14, usually bit-matched in instruction
 		return [uint8]((instr >> 12) and 0x03)
 	end
 	arg_func3:setinlined(true)
 
-	local terra arg_rs1(instr : uint32) -- bits 15-19
+	local terra arg_rs1(instr : uint32)
+		-- bits 15-19
 		return [uint8]((instr >> 15) and 0x1F)
 	end
 	arg_rs1:setinlined(true)
 
-	local terra arg_rs2(instr : uint32) -- bits 20-24
+	local terra arg_rs2(instr : uint32)
+		-- bits 20-24
 		return [uint8]((instr >> 20) and 0x1F)
 	end
 	arg_rs2:setinlined(true)
 
-	local terra arg_func7(instr : uint32) -- bits 25-31, usually bit-matched in instruction
+	local terra arg_func7(instr : uint32)
+		-- bits 25-31, usually bit-matched in instruction
 		return [uint8]((instr >> 25) and 0x7f)
 	end
 	arg_func7:setinlined(true)
@@ -126,17 +132,21 @@ local function register(register_instruction, cpu)
 		sign-extension
 	]]
 
-	local terra arg_imm_i(instr : uint32) -- bits 20-31 as bits 0-11
+	local terra arg_imm_i(instr : uint32)
+		-- bits 20-31 as bits 0-11
 		return [uint32]((instr >> 20) and 0x0FFF)
 	end
 	arg_imm_i:setinlined(true)
 
-	local terra arg_imm_s(instr : uint32) -- bits 7-11 as bits 0-4, 25-31 as bits 5-11
+	local terra arg_imm_s(instr : uint32)
+		-- bits 7-11 as bits 0-4, 25-31 as bits 5-11
 		return [uint32](((instr >> 7) and 0x1F) and (instr and (0x7f << 25)))
 	end
 	arg_imm_s:setinlined(true)
 
-	local terra arg_imm_b(instr : uint32) -- bit 7 as bit 11, bits 8-11 as bits 1-4, 25-30 as bits 5-10
+	local terra arg_imm_b(instr : uint32)
+		-- bit 7 as bit 11, bits 8-11 as bits 1-4, 25-30 as bits 5-10
+
 		-- bits 8-11 encode bits 1-4
 		var imm_1_4 : uint32 = (instr and 0x0F00) >> 7
 
@@ -356,7 +366,8 @@ local function register(register_instruction, cpu)
 		Control Transfer Instructions, Unconditional Jumps
 		JAL, JALR
 		(from page 27)
-
+	]]
+	--[[
 		The jump and link (JAL) instruction uses the J-type format, where the
 		J-immediate encodes a signed offset in multiples of 2 bytes. The offset
 		is sign-extended and added to the pc to form the jump target address.
@@ -387,8 +398,10 @@ local function register(register_instruction, cpu)
 			-- rd, rs1, imm_i
 			var rd : uint8 = arg_rd(instr) -- dest
 			var rs1 : uint8 = arg_rs1(instr) -- src
-			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
-			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1 -- target is rs1 + imm with the LSB removed
+			-- sign-extend i-imm
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr))
+			-- target is rs1 + imm with the LSB removed
+			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1
 			var cur_pc : uint64 = cpu:get_pc()
 			cpu:set_register(rd, cur_pc + 4)
 			cpu:set_pc(target)
