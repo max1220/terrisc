@@ -4,18 +4,25 @@ local stdio = terralib.includec("stdio.h")
 local Instruction_decoder = require("instruction_decoder")
 
 local function new_cpu_rv64(mem)
+	-- This function generates a new RV64 cpu_t and initializes it.
+	-- TODO: seperate the cpu_t generation and initialization
+
 	local mem = assert(mem)
 
 	local struct cpu_t {
 		running : uint8;
 		pc : uint64;
 	}
+	-- append 31(yes, this is correct) registers to the cpu_t definition.
 	for i=1, 31 do
 		table.insert(cpu_t.entries, {"x" .. i, uint64})
 	end
 
 	terra cpu_t:init()
+		-- initialize the cpu_t, making it ready to run
 		var reg_ptr : &uint64 = &self.pc
+
+		-- this should be equivalent of: self.pc = 0, self.x1 = 0, self.x2 = 0 (...) self.x31 = 0
 		for i=0, 32 do
 			reg_ptr[i] = 0
 		end
@@ -31,9 +38,10 @@ local function new_cpu_rv64(mem)
 		end
 		stdio.printf("----- end -----\n")
 	end
-	
+
 	terra cpu_t:set_register(reg_i : uint8, value : uint64)
 		-- set the register indicated by reg_i to value
+		-- TODO: I guess this should always be inlined?
 		if reg_i == 0 then
 			stdio.printf("Warning: Trying to set register 0!")
 		else
@@ -45,6 +53,7 @@ local function new_cpu_rv64(mem)
 
 	terra cpu_t:get_register(reg_i : uint8) : uint64
 		-- get the register indicated by reg_i
+		-- TODO: I guess this should always be inlined?
 		if reg_i == 0 then
 			stdio.printf("getting register: 0 -(always)-> 0\n")
 			return 0
@@ -54,12 +63,34 @@ local function new_cpu_rv64(mem)
 			return ptr[reg_i]
 		end
 	end
-	
 
+	terra cpu_t:get_pc() : uint64
+		-- get the program counter value
+		-- TODO: I guess this should always be inlined?
+		return self.pc
+	end
+
+	terra cpu_t:set_pc(new_pc : uint64)
+		-- set the program counter to a value
+		-- TODO: Great performance gains can be archived by JITing, this would
+		-- require creating a list of jump targets.
+		-- TODO: I guess this should always be inlined?
+		self.pc = new_pc
+	end
+
+	-- TODO: Make a file for the cpu_t implementation, and keep the
+	-- initialization seperate
+
+	-- allocate a CPU
 	local cpu = terralib.new(cpu_t)
+
+	-- initialze it
 	cpu:init()
+
+	-- generate an instruction decoder bound to this CPU
 	local instruction_decoder = Instruction_decoder.new({"instructions_RV32I"}, cpu)
 	local decode_instr = instruction_decoder.decode
+
 	terra cpu_t:step()
 		-- parse & execute a single instruction
 		stdio.printf("----- stepping at PC=0x%.8x -----\n", self.pc)
