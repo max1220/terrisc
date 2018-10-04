@@ -325,7 +325,6 @@ local function register(register_instruction, cpu)
 		end
 	)
 
-
 	add_instruction( "SLLI",	"0000000??????????001?????0010011",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
@@ -360,146 +359,6 @@ local function register(register_instruction, cpu)
 			end
 		end
 	)
-
-
-	--[[
-		Control Transfer Instructions, Unconditional Jumps
-		JAL, JALR
-		(from page 27)
-	]]
-	--[[
-		The jump and link (JAL) instruction uses the J-type format, where the
-		J-immediate encodes a signed offset in multiples of 2 bytes. The offset
-		is sign-extended and added to the pc to form the jump target address.
-		Jumps can therefore target a ±1 MiB range. JAL stores the address of the
-		instruction following the jump (pc+4) into register rd.
-		The indirect jump instruction JALR (jump and link register) uses the
-		I-type encoding. The target address is obtained by adding the 12-bit
-		signed I-immediate to the register rs1, then setting the
-		least-significant bit of the result to zero. The address of the
-		instruction following the jump (pc+4) is written to register rd.
-	]]
-
-
-
-	add_instruction( "JAL",		"?????????????????????????1101111",
-		terra(instr : uint32)
-			-- rd, imm_j
-			var rd : uint8 = arg_rd(instr)
-			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_j(instr))
-			var cur_pc : uint64 = cpu:get_pc()
-			cpu:set_register(rd, cur_pc + 4)
-			cpu:set_pc(cur_pc + imm)
-		end
-	)
-
-	add_instruction( "JALR",	"?????????????????000?????1100111",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-			var rd : uint8 = arg_rd(instr) -- dest
-			var rs1 : uint8 = arg_rs1(instr) -- src
-			-- sign-extend i-imm
-			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr))
-			-- target is rs1 + imm with the LSB removed
-			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1
-			var cur_pc : uint64 = cpu:get_pc()
-			cpu:set_register(rd, cur_pc + 4)
-			cpu:set_pc(target)
-		end
-	)
-
-	add_instruction( "BEQ",		"?????????????????000?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "BNE",		"?????????????????001?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "BLT",		"?????????????????100?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "BGE",		"?????????????????101?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "BLTU",	"?????????????????110?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "BGEU",	"?????????????????111?????1100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_b
-		end
-	)
-
-	add_instruction( "LB",		"?????????????????000?????0000011",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-		end
-	)
-
-	add_instruction( "LH",		"?????????????????001?????0000011",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-		end
-	)
-
-	add_instruction( "LW",		"?????????????????010?????0000011",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-		end
-	)
-
-	add_instruction( "LBU",		"?????????????????100?????0000011",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-		end
-	)
-
-	add_instruction( "LHU",		"?????????????????101?????0000011",
-		terra(instr : uint32)
-			-- rd, rs1, imm_i
-		end
-	)
-
-	add_instruction( "SB",		"?????????????????000?????0100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_s
-		end
-	)
-
-	add_instruction( "SH",		"?????????????????001?????0100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_s
-		end
-	)
-
-	add_instruction( "SW",		"?????????????????010?????0100011",
-		terra(instr : uint32)
-			-- rs1, rs2, imm_s
-		end
-	)
-
-
-
-
-
-
-
-
-
 
 
 
@@ -635,6 +494,154 @@ local function register(register_instruction, cpu)
 			cpu:set_register(rd, cpu:get_register(rs1) and cpu:get_register(rs2))
 		end
 	)
+
+
+
+	--[[
+		Control Transfer Instructions, Unconditional Jumps
+		JAL, JALR
+		(from page 27)
+	]]
+	--[[
+		The jump and link (JAL) instruction uses the J-type format, where the
+		J-immediate encodes a signed offset in multiples of 2 bytes. The offset
+		is sign-extended and added to the pc to form the jump target address.
+		Jumps can therefore target a ±1 MiB range. JAL stores the address of the
+		instruction following the jump (pc+4) into register rd.
+		The indirect jump instruction JALR (jump and link register) uses the
+		I-type encoding. The target address is obtained by adding the 12-bit
+		signed I-immediate to the register rs1, then setting the
+		least-significant bit of the result to zero. The address of the
+		instruction following the jump (pc+4) is written to register rd.
+	]]
+
+
+
+	add_instruction( "JAL",		"?????????????????????????1101111",
+		terra(instr : uint32)
+			-- rd, imm_j
+			var rd : uint8 = arg_rd(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_j(instr))
+			var cur_pc : uint64 = cpu:get_pc()
+			cpu:set_register(rd, cur_pc + 4)
+			cpu:set_pc(cur_pc + imm)
+		end
+	)
+
+	add_instruction( "JALR",	"?????????????????000?????1100111",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+			var rd : uint8 = arg_rd(instr) -- dest
+			var rs1 : uint8 = arg_rs1(instr) -- src
+			-- sign-extend i-imm
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr))
+			-- target is rs1 + imm with the LSB removed
+			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1
+			var cur_pc : uint64 = cpu:get_pc()
+			cpu:set_register(rd, cur_pc + 4)
+			cpu:set_pc(target)
+		end
+	)
+
+
+
+
+
+
+	add_instruction( "BEQ",		"?????????????????000?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "BNE",		"?????????????????001?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "BLT",		"?????????????????100?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "BGE",		"?????????????????101?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "BLTU",	"?????????????????110?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "BGEU",	"?????????????????111?????1100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_b
+		end
+	)
+
+	add_instruction( "LB",		"?????????????????000?????0000011",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+		end
+	)
+
+	add_instruction( "LH",		"?????????????????001?????0000011",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+		end
+	)
+
+	add_instruction( "LW",		"?????????????????010?????0000011",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+		end
+	)
+
+	add_instruction( "LBU",		"?????????????????100?????0000011",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+		end
+	)
+
+	add_instruction( "LHU",		"?????????????????101?????0000011",
+		terra(instr : uint32)
+			-- rd, rs1, imm_i
+		end
+	)
+
+	add_instruction( "SB",		"?????????????????000?????0100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_s
+		end
+	)
+
+	add_instruction( "SH",		"?????????????????001?????0100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_s
+		end
+	)
+
+	add_instruction( "SW",		"?????????????????010?????0100011",
+		terra(instr : uint32)
+			-- rs1, rs2, imm_s
+		end
+	)
+
+
+
+
+
+
+
+
+
+
+
 
 end
 return { register = register }
