@@ -72,8 +72,15 @@ local function register(register_instruction, cpu)
 
 
 	-- [[ Instruction argument decoders ]] --
-	-- these functions should always be inlined
-	-- TODO: write test cases for all of these
+	--[[
+		The instructions use these functions to get their arguments from
+		the instruction opcode. Because they are used allways in all
+		instructions, they are performance-critical, and should always
+		be inlined.
+		TODO: write test cases for all of these, including test cases for
+		sign-extension
+	]]
+
 	
 	local terra arg_rd(instr : uint32) -- bits 7-11
 		return [uint8]((instr >> 7) and 0x1F)
@@ -168,6 +175,19 @@ local function register(register_instruction, cpu)
 	--[[
 		In the risc-v spec v2.2 pdf, the desciption this is based on
 		starts on page 22 and 115.
+		
+		Each of the chapters there is implemented below. A comment at
+		the start of each segment in this file should contain an excerpt
+		from the spec, outlining how to implement the instruction.
+	]]
+	
+	
+	
+	--[[
+		 Integer Computational Instructions(from page 25)
+	
+		
+	
 	]]
 	
 	add_instruction( "LUI",		"?????????????????????????0110111",
@@ -190,7 +210,12 @@ local function register(register_instruction, cpu)
 	
 	add_instruction( "JAL",		"?????????????????????????1101111",
 		terra(instr : uint32)
-			-- rd, imm_u
+			-- rd, imm_j
+			var rd : uint8 = arg_rd(instr)
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_j(instr))
+			var cur_pc : uint64 = cpu:get_pc()
+			cpu:set_register(rd, cur_pc + 4)
+			cpu:set_pc(cur_pc + imm)
 		end
 	)
 	
@@ -387,6 +412,24 @@ local function register(register_instruction, cpu)
 			end
 		end
 	)
+	
+	
+	
+	--[[
+		Integer Register-Register Operations(from page 22)
+		ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
+		
+		ADD and SUB perform addition and subtraction respectively. Overflows
+		are ignored and the low XLEN bits of results are written to the
+		destination. SLT and SLTU perform signed and unsigned compares
+		respectively, writing 1 to rd if rs1 < rs2, 0 otherwise. Note,
+		SLTU rd, x0, rs2 sets rd to 1 if rs2 is not equal to zero, otherwise
+		sets rd to zero (assembler pseudo-op SNEZ rd, rs). AND, OR, and XOR
+		perform bitwise logical operations. SLL, SRL, and SRA perform
+		logical left, logical right, and arithmetic right shifts on the
+		value in register rs1 by the shift amount held in the lower 5 bits
+		of register rs2.
+	]]
 	
 	add_instruction( "ADD",		"0000000??????????000?????0110011",
 		terra(instr : uint32)
