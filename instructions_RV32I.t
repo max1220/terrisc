@@ -353,8 +353,20 @@ local function register(register_instruction, cpu)
 
 
 	--[[
-		Branching instructions
-		TODO
+		Control Transfer Instructions, Unconditional Jumps
+		JAL, JALR
+		(from page 27)
+
+		The jump and link (JAL) instruction uses the J-type format, where the
+		J-immediate encodes a signed offset in multiples of 2 bytes. The offset
+		is sign-extended and added to the pc to form the jump target address.
+		Jumps can therefore target a ±1 MiB range. JAL stores the address of the
+		instruction following the jump (pc+4) into register rd.
+		The indirect jump instruction JALR (jump and link register) uses the
+		I-type encoding. The target address is obtained by adding the 12-bit
+		signed I-immediate to the register rs1, then setting the
+		least-significant bit of the result to zero. The address of the
+		instruction following the jump (pc+4) is written to register rd.
 	]]
 
 
@@ -373,6 +385,13 @@ local function register(register_instruction, cpu)
 	add_instruction( "JALR",	"?????????????????000?????1100111",
 		terra(instr : uint32)
 			-- rd, rs1, imm_i
+			var rd : uint8 = arg_rd(instr) -- dest
+			var rs1 : uint8 = arg_rs1(instr) -- src
+			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr)) -- sign-extend i-imm
+			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1 -- target is rs1 + imm with the LSB removed
+			var cur_pc : uint64 = cpu:get_pc()
+			cpu:set_register(rd, cur_pc + 4)
+			cpu:set_pc(target)
 		end
 	)
 
