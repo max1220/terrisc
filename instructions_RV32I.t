@@ -156,7 +156,10 @@ local function register(register_instruction, cpu)
 		-- bits 25-30 encode bits 5-10
 		var imm_5_10 : uint32 = (instr and 0x7E000000) >> 20
 
-		return imm_1_4 and imm_5_10 and imm_11
+		-- bit 31 encodes bit 12
+		var imm_12 : uint32 = (instr and ([uint32](1) << 31)) >> 31
+
+		return imm_1_4 and imm_5_10 and imm_11 and imm_12
 	end
 	arg_imm_b:setinlined(true)
 
@@ -502,6 +505,7 @@ local function register(register_instruction, cpu)
 		JAL, JALR
 		(from page 27)
 	]]
+
 	--[[
 		The jump and link (JAL) instruction uses the J-type format, where the
 		J-immediate encodes a signed offset in multiples of 2 bytes. The offset
@@ -545,44 +549,101 @@ local function register(register_instruction, cpu)
 
 
 
+	--[[
+		Control Transfer Instructions, Conditional Branches
+		BEQ, BNE, BLT, BLTU, BGE, BGEU
+		(from page 29)
+	]]
 
-
+	--[[
+		Branch instructions compare two registers. BEQ and BNE take the branch
+		if registers rs1 and rs2 are equal or unequal respectively.
+		BLT and BLTU take the branch if rs1 is less than rs2, using signed and
+		unsigned comparison respectively.
+		BGE and BGEU take the branch if rs1 is greater than or equal to rs2,
+		using signed and unsigned comparison respectively.
+	]]
 
 	add_instruction( "BEQ",		"?????????????????000?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if cpu:get_register(rs1) == cpu:get_register(rs2) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
 
 	add_instruction( "BNE",		"?????????????????001?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if cpu:get_register(rs1) ~= cpu:get_register(rs2) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
 
 	add_instruction( "BLT",		"?????????????????100?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if [int64](cpu:get_register(rs1)) < [int64](cpu:get_register(rs2)) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
 
 	add_instruction( "BGE",		"?????????????????101?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if [int64](cpu:get_register(rs1)) >= [int64](cpu:get_register(rs2)) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
 
 	add_instruction( "BLTU",	"?????????????????110?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if cpu:get_register(rs1) < cpu:get_register(rs2) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
 
 	add_instruction( "BGEU",	"?????????????????111?????1100011",
 		terra(instr : uint32)
 			-- rs1, rs2, imm_b
+			var rs1 : uint8 = arg_rs1(instr)
+			var rs2 : uint8 = arg_rs2(instr)
+			if cpu:get_register(rs1) >= cpu:get_register(rs2) then
+				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
+				var target : uint64 = cpu:get_pc() + imm
+				cpu:set_pc(cur_pc + imm)
+			end
 		end
 	)
+
+
+
 
 	add_instruction( "LB",		"?????????????????000?????0000011",
 		terra(instr : uint32)
@@ -631,16 +692,6 @@ local function register(register_instruction, cpu)
 			-- rs1, rs2, imm_s
 		end
 	)
-
-
-
-
-
-
-
-
-
-
 
 
 end
