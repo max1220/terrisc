@@ -1,6 +1,6 @@
 # terrisc
 
-This is an incomplete atempt to implement a RV32I v2.2(later up to RV64G) emulator.
+This is an incomplete attempt to implement a RV32I v2.2(later up to RV64G) emulator.
 
 It uses the terra programming language, which extends Lua by a staticly-typed
 language that integrates with normal Lua code.
@@ -11,8 +11,8 @@ while still having the performance of a LLVM-compiled native binary.
 
 In the future, it should be possible to export the emulator-part from terra as
 either a stand-alone library(As a .so file), or application. Also possible,
-allthough in the stand-alone versions not as easily, is a JIT for the
-emulator: Terra already has all the facilitys to make that happen(mostly LLVM).
+although in the stand-alone versions not as easily, is a JIT for the
+emulator: Terra already has all the facility to make that happen(mostly LLVM).
 
 
 
@@ -28,13 +28,15 @@ emulator: Terra already has all the facilitys to make that happen(mostly LLVM).
 | instructions_RV32I.t  | implements the RV32I base instruction set(incomplete). Each instruction registers itself to an instrucion_decoder via a bitmask, bitpattern and a callback pointer
 | cpu_test.t            | Some tests for the CPU. Not automated. More a reference. Might be broken at times.
 
+Please note that github misidentifys the .t files as perl files, so the syntax
+highlighting on github might not work properly.
 
 
 
 
 ## Current status
 
-IDK how often this status will be updated, the source code is the canonnical
+IDK how often this status will be updated, the source code is the canonical
 documentation:
 
 
@@ -48,9 +50,8 @@ documentation:
  ### Missing(for base ISA):
 
   * missing instruction callbacks
-  * proper signed-ness in all instructions
-  * branching
   * traps, interrupts, ...
+  * more
 
  ### General TODO:
 
