@@ -126,7 +126,7 @@ local function new_memory_64(size)
 
 	local mem = terralib.new(mem_t)
 	mem:init()
-	return mem
+	return mem, mem_t
 end
 
 return {

@@ -86,7 +86,7 @@ local function register(register_instruction, cpu)
 		instructions, they are performance-critical, and should always
 		be inlined.
 		TODO: write test cases for all of these, including test cases for
-		sign-extension
+		proper sign-extension
 	]]
 
 
@@ -468,7 +468,7 @@ local function register(register_instruction, cpu)
 			var rd : uint8 = arg_rd(instr)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
-			if (cpu:get_register(rs1) and 0x8000000000000000) == 0 then
+			if (cpu:get_register(rs1) and (1<<31)) == 0 then
 				cpu:set_register(rd, cpu:get_register(rs1) >> (cpu:get_register(rs2) and 0x1F))
 			else
 				-- copy sign bit
@@ -540,7 +540,7 @@ local function register(register_instruction, cpu)
 			-- sign-extend i-imm
 			var imm : int32 = arg_imm_sign_extend(instr, arg_imm_i(instr))
 			-- target is rs1 + imm with the LSB removed
-			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) not 1
+			var target : uint64 = ((cpu:get_register(rs1) + imm) or 1) - 1
 			var cur_pc : uint64 = cpu:get_pc()
 			cpu:set_register(rd, cur_pc + 4)
 			cpu:set_pc(target)
@@ -570,8 +570,9 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if cpu:get_register(rs1) == cpu:get_register(rs2) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
@@ -583,8 +584,9 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if cpu:get_register(rs1) ~= cpu:get_register(rs2) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
@@ -596,8 +598,9 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if [int64](cpu:get_register(rs1)) < [int64](cpu:get_register(rs2)) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
@@ -609,8 +612,9 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if [int64](cpu:get_register(rs1)) >= [int64](cpu:get_register(rs2)) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
@@ -622,8 +626,9 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if cpu:get_register(rs1) < cpu:get_register(rs2) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
@@ -635,15 +640,32 @@ local function register(register_instruction, cpu)
 			var rs1 : uint8 = arg_rs1(instr)
 			var rs2 : uint8 = arg_rs2(instr)
 			if cpu:get_register(rs1) >= cpu:get_register(rs2) then
-				var imm : int32 = arg_imm_sign_extend(arg_imm_b(instr))
-				var target : uint64 = cpu:get_pc() + imm
+				var imm : int32 = arg_imm_sign_extend(instr, arg_imm_b(instr))
+				var cur_pc : uint64 = cpu:get_pc()
+				var target : uint64 = cur_pc + imm
 				cpu:set_pc(cur_pc + imm)
 			end
 		end
 	)
 
 
+	--[[
+		Load and Store Instructions
+		LB, LH, LW, LBU, LHU, SB, SH, SW
+		(from page 30)
+	]]
 
+	--[[
+		The effective byte address is obtained by adding register rs1 to the
+		sign-extended 12-bit offset. Loads copy a value from memory to register
+		rd. Stores copy the value in register rs2 to memory. The LW instruction
+		loads a 32-bit value from memory into rd. LH loads a 16-bit value from
+		memory, then sign-extends to 32-bits before storing in rd. LHU loads a
+		16-bit value from memory but then zero extends to 32-bits before
+		storing in rd. LB and LBU are defined analogously for 8-bit values.
+		The SW, SH, and SB instructions store 32-bit, 16-bit, and 8-bit values
+		from the low bits of register rs2 to memory.
+	]]
 
 	add_instruction( "LB",		"?????????????????000?????0000011",
 		terra(instr : uint32)

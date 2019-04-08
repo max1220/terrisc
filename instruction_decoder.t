@@ -76,7 +76,8 @@ function new_instruction_decoder(instruction_sets, cpu)
 	end
 
 	local instruction_decoder = {
-		decode = decode_instruction
+		decode = decode_instruction,
+		instruction_array = instruction_array
 	}
 	
 	return instruction_decoder
